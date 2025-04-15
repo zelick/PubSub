@@ -1,33 +1,40 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace PubSubConsoleApp
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            var engine = new PubSubEngine();
+            var pubSub = new PubSubEngine();
+            var subscriber1 = new Subscriber("Ana", message =>
+            {
+                Console.WriteLine($"[Ana] Primljena poruka: {message}");
+                Thread.Sleep(1000); // simulacija sporijeg korisnika
+            });
 
-            // Pretplate korisnika
-            engine.Subscribe(1, msg => Console.WriteLine($"[Ana] Poruka: {msg}"));
-            engine.Subscribe(1, msg => Console.WriteLine($"[Kristina] Poruka: {msg}"));
-            engine.Subscribe(2, msg => Console.WriteLine($"[Milica] Poruka: {msg}"));
+            var subscriber2 = new Subscriber("Kristina", message =>
+            {
+                Console.WriteLine($"[Kristina] Primljena poruka: {message}");
+            });
 
-            // Objavi poruku na temu 1 (Fotografije)
-            Console.WriteLine("Objavljujem novu poruku na temu 1 (Fotografije)...");
-            engine.Publish(1, "Nova pesma od izvođača X!");
+            var subscriber3 = new Subscriber("Milica", message =>
+            {
+                Console.WriteLine($"[Milica] Poruka obrađena: {message}");
+                Thread.Sleep(2000); // još sporiji subscriber
+            });
 
-            // Objavi poruku na temu 2 (Sport)
-            Console.WriteLine("Objavljujem novu poruku na temu 2 (Sport)...");
-            engine.Publish(2, "Fudbalski tim Y je pobedio!");
+            pubSub.Subscribe(1, subscriber1);
+            pubSub.Subscribe(1, subscriber2);
+            pubSub.Subscribe(1, subscriber3);
 
-            // Objavi poruku na temu 3 (niko nije pretplaćen, neće se ništa desiti)
-            Console.WriteLine("Objavljujem na temu 3 (nepostojeća pretplata)...");
-            engine.Publish(3, "Ovo niko neće videti");
+            pubSub.Publish(1, "Publish poruka 1");
+            pubSub.Publish(1, "Publish poruka 2");
+            pubSub.Publish(1, "Publish poruka 3");
 
-            // Sačekaj malo da se niti završe
-            Thread.Sleep(1000);
+            Console.ReadKey(); // zadržava aplikaciju da se pozadinske niti izvrse
         }
     }
 }
