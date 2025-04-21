@@ -4,37 +4,40 @@ using System.Threading;
 
 namespace PubSubConsoleApp
 {
+    public delegate void Handler(string message); 
     class Program
     {
+        public static void WriteMessage(string message)
+        {
+            Console.WriteLine($"[Handler 1] Primljena poruka: {message}");
+            Thread.Sleep(2000); // simulacija sporog handlera
+        }
+
+        public static void FastHandler(string message)
+        {
+            Console.WriteLine($"[Handler 2] Brza obrada poruke: {message}");
+        }
+
+        public static void AnotherHandler(string message)
+        {
+            Console.WriteLine($"[Handler 3] Još jedan handler dobio poruku: {message}");
+        }
         static void Main()
         {
-            var pubSub = new PubSubEngine();
-            var subscriber1 = new Subscriber("Ana", message =>
-            {
-                Console.WriteLine($"[Ana] Primljena poruka: {message}");
-                Thread.Sleep(1000); // simulacija sporijeg korisnika
-            });
+            //var engine = new PubSubEngine();
 
-            var subscriber2 = new Subscriber("Kristina", message =>
-            {
-                Console.WriteLine($"[Kristina] Primljena poruka: {message}");
-            });
+            var pubSubManager = new PubSubManager();
 
-            var subscriber3 = new Subscriber("Milica", message =>
-            {
-                Console.WriteLine($"[Milica] Poruka obrađena: {message}");
-                Thread.Sleep(2000); // još sporiji subscriber
-            });
+            pubSubManager.Subscribe(1, WriteMessage);
+            pubSubManager.Subscribe(1, FastHandler);
+            pubSubManager.Subscribe(1, AnotherHandler);
 
-            pubSub.Subscribe(1, subscriber1);
-            pubSub.Subscribe(1, subscriber2);
-            pubSub.Subscribe(1, subscriber3);
+            pubSubManager.Publish(1, "Poruka #1");
+            pubSubManager.Publish(1, "Poruka #2");
+            pubSubManager.Publish(1, "Poruka #3");
 
-            pubSub.Publish(1, "Publish poruka 1");
-            pubSub.Publish(1, "Publish poruka 2");
-            pubSub.Publish(1, "Publish poruka 3");
-
-            Console.ReadKey(); // zadržava aplikaciju da se pozadinske niti izvrse
+            Console.WriteLine("Poruke su poslate. Obrada..");
+            Console.ReadKey();
         }
     }
 }

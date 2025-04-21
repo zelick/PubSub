@@ -8,25 +8,38 @@ namespace PubSubConsoleApp
 {
     public class PubSubEngine
     {
-
-        private readonly Dictionary<int, List<Subscriber>> subscribers = new();
+        private readonly Dictionary<int, List<Handler>> subscribers = new();
+        private readonly Dictionary<int, string> PublicationMap = new(); //ovde mi se nalaze sve neobradjene publikacije
         private readonly object _lock = new();
-        public void Subscribe(int topicId, Subscriber subscriber)
+
+        public PubSubEngine() 
+        {
+            StartConsumingMessages();
+        }
+        private void StartConsumingMessages()
+        {
+            Thread thread = new Thread(() => { 
+                //prolazi kroz neobradjene poruke i tamo gde postoji subscriber onda poziva registrovani delegat 
+                //da li mi treba red za svakog subrscibera
+            });
+        }
+
+        public void Subscribe(int topicId, Handler handler)
         {
             lock (_lock)
             {
                 if (!subscribers.ContainsKey(topicId))
                 {
-                    subscribers[topicId] = new List<Subscriber>();
+                    subscribers[topicId] = new List<Handler>();
                 }
 
-                subscribers[topicId].Add(subscriber);
+                subscribers[topicId].Add(handler);
             }
         }
 
         public void Publish(int topicId, string message) 
         {
-            List<Subscriber> subList;
+            List<Handler> subList;
 
             lock (_lock)
             {
@@ -34,12 +47,10 @@ namespace PubSubConsoleApp
                     return;
             }
 
-           // Console.WriteLine($"[PubSubEngine] Tema {topicId}: \"{message}\" ({subscribers.Count} pretplatnika)");
-
-            foreach (var subscriber in subList)
-            {
-                subscriber.ProduceMessage(message);
-            }
+            //foreach (var subscriber in subList)
+            //{
+            //    subscriber
+            //}
         }
     }
 }

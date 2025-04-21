@@ -6,25 +6,22 @@ using System.Threading.Tasks;
 
 namespace PubSubConsoleApp
 {
-    //Svaki subscriber ima svoju nit koja obradjuje poruke iz svog reda
-    //Ako je mreza sporija za nekoga ili je nema
     public class Subscriber
-    { 
+    {
+        
         public string Name { get; set; }
-        public readonly Action<string> Handler;
+        public Handler Handler { get; set; }
         public readonly Queue<string> Channel = new Queue<string>();
         public readonly object _lock = new();
         private readonly AutoResetEvent messageAvailable = new(false); // signal za novu poruku
 
-        public Subscriber(string name, Action<string> handler) 
-        {
+        public Subscriber(string name, Handler handler) {
             Name = name;
             Handler = handler;
             StartConsumingMessages();
         }
 
-        //poruke stuzu u red
-        // ako ovaj subscriber ne radi treunto ili je spor - poruke cekaju u redu
+
         public void ProduceMessage(string message)
         {
             lock (_lock)
@@ -43,6 +40,7 @@ namespace PubSubConsoleApp
                     messageAvailable.WaitOne(); // ceka dok ne stigne signal
  
                     string message;
+
                     lock (_lock)
                     {
                         if (Channel.Count == 0)
@@ -50,7 +48,7 @@ namespace PubSubConsoleApp
 
                         message = Channel.Dequeue();
                     }
-
+                    Console.WriteLine("Poruka poslata za: " + this.Name);
                     Handler(message);
                 }
             });
