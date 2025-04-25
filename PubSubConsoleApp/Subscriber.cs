@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PubSubConsoleApp
 {
-    public class Subscriber
+    public class Subscriber //NE TREBA OVO
     {
         
         public string Name { get; set; }

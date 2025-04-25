@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,49 +9,51 @@ namespace PubSubConsoleApp
 {
     public class PubSubEngine
     {
-        private readonly Dictionary<int, List<Handler>> subscribers = new();
-        private readonly Dictionary<int, string> PublicationMap = new(); //ovde mi se nalaze sve neobradjene publikacije
-        private readonly object _lock = new();
+        private readonly Dictionary<int, List<Handler>> subscribersMap = new();
+        private readonly Dictionary<int, BlockingCollection<string>> topicMessageQueues = new();
 
-        public PubSubEngine() 
+        public void Subscribe(int topic, Handler action)
         {
-            StartConsumingMessages();
-        }
-        private void StartConsumingMessages()
-        {
-            Thread thread = new Thread(() => { 
-                //prolazi kroz neobradjene poruke i tamo gde postoji subscriber onda poziva registrovani delegat 
-                //da li mi treba red za svakog subrscibera
-            });
-        }
-
-        public void Subscribe(int topicId, Handler handler)
-        {
-            lock (_lock)
+            lock (subscribersMap)
             {
-                if (!subscribers.ContainsKey(topicId))
+                if (!topicMessageQueues.ContainsKey(topic))
                 {
-                    subscribers[topicId] = new List<Handler>();
+                    topicMessageQueues[topic] = new BlockingCollection<string>();
                 }
 
-                subscribers[topicId].Add(handler);
+                if (!subscribersMap.ContainsKey(topic))
+                {
+                    subscribersMap[topic] = new List<Handler>();
+                }
+                subscribersMap[topic].Add(action);
+
+                var messageQueue = topicMessageQueues[topic];
+
+                var thread = new Thread(() =>
+                {
+                    foreach (var message in messageQueue.GetConsumingEnumerable()) //GetConsumingEnumerable - ceka poruke, bez stalnog proveravanja 
+                    {
+                        foreach (var handler in subscribersMap[topic])
+                        {
+                            handler(message);
+                        }
+                    }
+                });
+
+                thread.IsBackground = true;
+                thread.Start();
             }
         }
-
-        public void Publish(int topicId, string message) 
+        public void Publish(int topic, string message)
         {
-            List<Handler> subList;
-
-            lock (_lock)
+            lock (topicMessageQueues)
             {
-                if (!subscribers.TryGetValue(topicId, out subList))
-                    return;
+                if (topicMessageQueues.TryGetValue(topic, out var queue))
+                {
+                    queue.Add(message); 
+                }
             }
-
-            //foreach (var subscriber in subList)
-            //{
-            //    subscriber
-            //}
         }
+
     }
 }
