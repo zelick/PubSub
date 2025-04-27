@@ -10,19 +10,21 @@ namespace PubSubConsoleApp
     public class PubSubEngine
     {
 
-        private readonly Dictionary<int, List<Handler>> subscribersMap = new Dictionary<int, List<Handler>>(); //kad zatreba
+        private readonly Dictionary<int, Handler> subscribersMap = new Dictionary<int, Handler>(); //kad zatreba
         private readonly Dictionary<int, List<BlockingCollection<string>>> topicMessageQueues = new Dictionary<int, List<BlockingCollection<string>>>();
+        private readonly object topicLock = new object();
 
         public void Subscribe(int topic, Handler action)
         {
             var queue = new BlockingCollection<string>();
-
-            if (!topicMessageQueues.ContainsKey(topic))
+            lock (topicLock)
             {
-                topicMessageQueues[topic] = new List<BlockingCollection<string>>();
+                if (!topicMessageQueues.ContainsKey(topic))
+                {
+                    topicMessageQueues[topic] = new List<BlockingCollection<string>>();
+                }
+                topicMessageQueues[topic].Add(queue);
             }
-            topicMessageQueues[topic].Add(queue);
-
             ThreadPool.QueueUserWorkItem( ac => //metoda ce biti izvrsena kada se nit oslobodi
             {
                 foreach (var message in queue.GetConsumingEnumerable())
@@ -33,11 +35,14 @@ namespace PubSubConsoleApp
         }
         public void Publish(int topic, string message)
         {
-            if (topicMessageQueues.ContainsKey(topic))
+            lock (topicLock)
             {
-                foreach (var queue in topicMessageQueues[topic])
+                if (topicMessageQueues.ContainsKey(topic))
                 {
-                    queue.Add(message);
+                    foreach (var queue in topicMessageQueues[topic])
+                    {
+                        queue.Add(message);
+                    }
                 }
             }
         }
