@@ -15,7 +15,7 @@ namespace PubSubConsoleApp
 
         public static void FastHandler(string message)
         {
-            Thread.Sleep(2000);
+            //Thread.Sleep(2000);
             Console.WriteLine($"[Handler 2] Primljena poruka 2: {message}");
         }
 

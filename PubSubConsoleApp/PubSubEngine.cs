@@ -9,48 +9,35 @@ namespace PubSubConsoleApp
 {
     public class PubSubEngine
     {
-        private readonly Dictionary<int, List<Handler>> subscribersMap = new();
-        private readonly Dictionary<int, BlockingCollection<string>> topicMessageQueues = new();
+
+        private readonly Dictionary<int, List<Handler>> subscribersMap = new Dictionary<int, List<Handler>>(); //kad zatreba
+        private readonly Dictionary<int, List<BlockingCollection<string>>> topicMessageQueues = new Dictionary<int, List<BlockingCollection<string>>>();
 
         public void Subscribe(int topic, Handler action)
         {
-            lock (subscribersMap)
+            var queue = new BlockingCollection<string>();
+
+            if (!topicMessageQueues.ContainsKey(topic))
             {
-                if (!topicMessageQueues.ContainsKey(topic))
-                {
-                    topicMessageQueues[topic] = new BlockingCollection<string>();
-                }
-
-                if (!subscribersMap.ContainsKey(topic))
-                {
-                    subscribersMap[topic] = new List<Handler>();
-                }
-                subscribersMap[topic].Add(action);
-
-                var messageQueue = topicMessageQueues[topic];
-
-                var thread = new Thread(() =>
-                {
-                    foreach (var message in messageQueue.GetConsumingEnumerable()) //GetConsumingEnumerable - ceka poruke, bez stalnog proveravanja 
-                    {
-                        foreach (var handler in subscribersMap[topic])
-                        {
-                            handler(message);
-                        }
-                    }
-                });
-
-                thread.IsBackground = true;
-                thread.Start();
+                topicMessageQueues[topic] = new List<BlockingCollection<string>>();
             }
+            topicMessageQueues[topic].Add(queue);
+
+            ThreadPool.QueueUserWorkItem( ac => //metoda ce biti izvrsena kada se nit oslobodi
+            {
+                foreach (var message in queue.GetConsumingEnumerable())
+                {
+                    action(message); 
+                }
+            });
         }
         public void Publish(int topic, string message)
         {
-            lock (topicMessageQueues)
+            if (topicMessageQueues.ContainsKey(topic))
             {
-                if (topicMessageQueues.TryGetValue(topic, out var queue))
+                foreach (var queue in topicMessageQueues[topic])
                 {
-                    queue.Add(message); 
+                    queue.Add(message);
                 }
             }
         }
